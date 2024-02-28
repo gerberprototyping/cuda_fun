@@ -5,7 +5,7 @@
 #include <random>
 #include <chrono>
 
-// #include "iec_units.h"
+#include "iec_units.h"
 
 using namespace std::chrono;
 
@@ -13,20 +13,20 @@ using namespace std::chrono;
 // Choose datatype
 //----------------
 // #define USE_FLOAT
-#define USE_DOUBLE
-// #define USE_INT32
+// #define USE_DOUBLE
+#define USE_INT32
 // #define USE_INT64
 
 // Choose array size
 //------------------
-// #define ARRAY_SIZE  _128MiB
+#define ARRAY_SIZE  _32MiB
 
 
 #ifdef USE_FLOAT
     typedef float T;
 #endif
 #ifdef USE_DOUBLE
-    typedef double T
+    typedef double T;
 #endif
 #ifdef USE_INT32
     typedef int32_t T;
@@ -41,13 +41,9 @@ using namespace std::chrono;
 #endif
 
 
-// #define NxN         (ARRAY_SIZE / sizeof(T))
-// #define N           ((size_t) floor(sqrt(NxN)))
-// #define ACTUAL_SIZE (N*N * sizeof(T))
-
-#define N           1024
-#define NxN         (N*N)
-#define ARRAY_SIZE  (NxN * sizeof(T))
+#define NxN         (ARRAY_SIZE / sizeof(T))
+#define N           ((size_t) floor(sqrt(NxN)))
+#define ACTUAL_SIZE (N*N * sizeof(T))
 
 
 #define STR_BUFF_OFFSET     16
@@ -68,7 +64,7 @@ void print(T* A, T* B, T* C);
 
 int main() {
 
-    assert(ARRAY_SIZE >= ACTUAL_SIZE);
+    // assert(ARRAY_SIZE >= ACTUAL_SIZE);
 
     // Set locale for printf
     setlocale(LC_NUMERIC, "");
@@ -80,8 +76,8 @@ int main() {
     }
 
     // Query GPU device properties
-    // int deviceId;
-    // cudaGetDevice(&deviceId);
+    int deviceId;
+    cudaGetDevice(&deviceId);
     // cudaDeviceProp props;
     // cudaGetDeviceProperties(&props, deviceId);
 
@@ -161,9 +157,9 @@ int main() {
     // GPU
     printf("GPU...");
     fflush(stdout);
-    // cudaMemPrefetchAsync(A, ARRAY_SIZE, deviceId);
-    // cudaMemPrefetchAsync(B, ARRAY_SIZE, deviceId);
-    // cudaMemPrefetchAsync(C, ARRAY_SIZE, deviceId);
+    cudaMemPrefetchAsync(A, ARRAY_SIZE, deviceId);
+    cudaMemPrefetchAsync(B, ARRAY_SIZE, deviceId);
+    cudaMemPrefetchAsync(C, ARRAY_SIZE, deviceId);
     auto gpu_start = high_resolution_clock::now();
     gpu_matmul<<<dim3(N,N),1>>>(A, B, C);
     cudaDeviceSynchronize();
@@ -177,9 +173,9 @@ int main() {
     // Verify
     // printf("Verifying...");
     // fflush(stdout);
-    // // cudaMemPrefetchAsync(A, ARRAY_SIZE, cudaCpuDeviceId);
-    // // cudaMemPrefetchAsync(B, ARRAY_SIZE, cudaCpuDeviceId);
-    // // cudaMemPrefetchAsync(C, ARRAY_SIZE, cudaCpuDeviceId);
+    // cudaMemPrefetchAsync(A, ARRAY_SIZE, cudaCpuDeviceId);
+    // cudaMemPrefetchAsync(B, ARRAY_SIZE, cudaCpuDeviceId);
+    // cudaMemPrefetchAsync(C, ARRAY_SIZE, cudaCpuDeviceId);
     // bool valid = true;
     // for (size_t row=0; row<N; row++) {
     //     for (size_t col=0; col<N; col++) {

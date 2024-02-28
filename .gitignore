@@ -8,3 +8,4 @@ matmul/matmul_int32
 matmul/matmul_int64
 **/report.txt
 saxpy/saxpy
+*.o

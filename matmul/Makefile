@@ -1,10 +1,11 @@
 NVCC = nvcc
-CFLAGS  = -Wall,-march=native
-CUFLAGS  = -O3 -arch=native --default-stream per-thread --use_fast_math -Xcompiler $(CFLAGS)
-CUFLAGS += -Xptxas -warn-double-usage,-warn-spills
-# CUFLAGS += --expt-relaxed-constexpr
+CUFLAGS  = -O3 -arch=native --default-stream per-thread --use_fast_math
+CUFLAGS += --expt-relaxed-constexpr
+# CUFLAGS += -Xptxas -warn-double-usage,-warn-spills
 # CUFLAGS += -Werror all-warnings
 # CUFLAGS += --profile
+CFLAGS  = -Wall,-march=native
+CUFLAGS += -Xcompiler $(CFLAGS)
 # LDFLAGS =
 SRC = $(wildcard *.cu)
 OBJ = $(SRC:.cu=.o)
