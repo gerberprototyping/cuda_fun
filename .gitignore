@@ -1,0 +1,10 @@
+*.out
+*.nsys-rep
+*.sqlite
+matmul/matmul
+matmul/matmul_float
+matmul/matmul_double
+matmul/matmul_int32
+matmul/matmul_int64
+**/report.txt
+saxpy/saxpy
