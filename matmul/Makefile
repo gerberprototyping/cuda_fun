@@ -16,10 +16,12 @@ TARGET = matmul
 build: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(NVCC) $(CUFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo nvcc -o $@ $^
+	@$(NVCC) $(CUFLAGS) -o $@ $^ $(LDFLAGS)
 
 %.o: %.cu $(DEPEND)
-	$(NVCC) $(CUFLAGS) -c -o $@ $<
+	@echo nvcc -c -o $@ $<
+	@$(NVCC) $(CUFLAGS) -c -o $@ $<
 
 
 .PHONY: run

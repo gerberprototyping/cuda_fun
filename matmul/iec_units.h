@@ -31,7 +31,7 @@ void format_iec(char* str, const size_t data) {
     float x = data;
     int suffix = 0;
     for (; suffix<5; suffix++) {
-        if (x < 8192) {
+        if (x < 1024) {
             break;
         }
         x /= 1024;

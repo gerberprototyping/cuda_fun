@@ -5,6 +5,10 @@
 #include <random>
 #include <chrono>
 
+// AVX headers
+#include <immintrin.h>
+#include <x86intrin.h>
+
 #include "iec_units.h"
 
 using namespace std::chrono;
@@ -14,8 +18,8 @@ using namespace std::chrono;
 //----------------
 // #define USE_FLOAT
 // #define USE_DOUBLE
-#define USE_INT32
-// #define USE_INT64
+// #define USE_INT32
+#define USE_INT64
 
 // Choose array size
 //------------------
@@ -53,8 +57,11 @@ using namespace std::chrono;
 
 
 __global__ void gpu_matmul(T* A, T* B, T* C);
+__global__ void gpu_matmul_trans(T* A, T* B, T* C);
 
 inline void cpu_matmul(T* A, T* B, T* C);
+inline void cpu_matmul_trans(T* A, T* B, T* C);
+inline void avx_matmul(T** mat1, T** mat2, T** result);
 
 void allocate(T** ptr, size_t n);
 void print(T* A, T* B, T* C);
@@ -145,13 +152,36 @@ int main() {
     // CPU
     printf("CPU...");
     fflush(stdout);
-    auto cpu_start = high_resolution_clock::now();
+    auto start = high_resolution_clock::now();
     cpu_matmul(A, B, cpu_C);
-    auto cpu_stop = high_resolution_clock::now();
-    auto cpu_time = duration_cast<microseconds>(cpu_stop - cpu_start);
-    sprintf(__str_buff, "%'ld", cpu_time.count());
-    char* cpu_time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
-    printf("done  %s us\n", cpu_time_str);
+    auto stop = high_resolution_clock::now();
+    auto time = duration_cast<microseconds>(stop - start);
+    sprintf(__str_buff, "%'ld", time.count());
+    char* time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
+    printf("done  %s us\n", time_str);
+
+    // CPU Transposed
+    printf("CPUt..");
+    fflush(stdout);
+    start = high_resolution_clock::now();
+    cpu_matmul_trans(A, B, C);
+    stop = high_resolution_clock::now();
+    time = duration_cast<microseconds>(stop - start);
+    sprintf(__str_buff, "%'ld", time.count());
+    time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
+    printf("done  %s us\n", time_str);
+
+
+    // AVX
+    // printf("AVX...");
+    // fflush(stdout);
+    // auto avx_start = high_resolution_clock::now();
+    // avx_matmul((T**) A, (T**) B, (T**) C);
+    // auto avx_stop = high_resolution_clock::now();
+    // auto avx_time = duration_cast<microseconds>(avx_stop - avx_start);
+    // sprintf(__str_buff, "%'ld", avx_time.count());
+    // char* avx_time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
+    // printf("done  %s us\n", avx_time_str);
 
 
     // GPU
@@ -160,14 +190,30 @@ int main() {
     cudaMemPrefetchAsync(A, ARRAY_SIZE, deviceId);
     cudaMemPrefetchAsync(B, ARRAY_SIZE, deviceId);
     cudaMemPrefetchAsync(C, ARRAY_SIZE, deviceId);
-    auto gpu_start = high_resolution_clock::now();
+    start = high_resolution_clock::now();
     gpu_matmul<<<dim3(N,N),1>>>(A, B, C);
     cudaDeviceSynchronize();
-    auto gpu_stop = high_resolution_clock::now();
-    auto gpu_time = duration_cast<microseconds>(gpu_stop - gpu_start);
-    sprintf(__str_buff, "%'ld", gpu_time.count());
-    char* gpu_time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
-    printf("done  %s us\n", gpu_time_str);
+    stop = high_resolution_clock::now();
+    time = duration_cast<microseconds>(stop - start);
+    sprintf(__str_buff, "%'ld", time.count());
+    time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
+    printf("done  %s us\n", time_str);
+
+
+    // GPU
+    printf("GPUt..");
+    fflush(stdout);
+    // cudaMemPrefetchAsync(A, ARRAY_SIZE, deviceId);
+    // cudaMemPrefetchAsync(B, ARRAY_SIZE, deviceId);
+    // cudaMemPrefetchAsync(C, ARRAY_SIZE, deviceId);
+    start = high_resolution_clock::now();
+    gpu_matmul_trans<<<dim3(N,N),1>>>(A, B, C);
+    cudaDeviceSynchronize();
+    stop = high_resolution_clock::now();
+    time = duration_cast<microseconds>(stop - start);
+    sprintf(__str_buff, "%'ld", time.count());
+    time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
+    printf("done  %s us\n", time_str);
 
 
     // Verify
@@ -200,7 +246,16 @@ int main() {
 __global__ void gpu_matmul(T* A, T* B, T* C) {
     T sum = 0;
     for (size_t k=0; k<N; k++) {
-        sum += A[blockIdx.x*N + k] * B[k*N + blockIdx.y];
+        sum += A[blockIdx.x*N + k] * B[k*N + blockIdx.y]; // B not transposed
+    }
+    C[blockIdx.x*N + blockIdx.y] = sum;
+}
+
+
+__global__ void gpu_matmul_trans(T* A, T* B, T* C) {
+    T sum = 0;
+    for (size_t k=0; k<N; k++) {
+        sum += A[blockIdx.x*N + k] * B[k + N*blockIdx.y]; // B tranposed
     }
     C[blockIdx.x*N + blockIdx.y] = sum;
 }
@@ -215,6 +270,23 @@ inline void cpu_matmul(T* A, T* B, T* C) {
             }
         }
     }
+}
+
+
+inline void cpu_matmul_trans(T* A, T* B, T* C) {
+    for (size_t row=0; row<N; row++) {
+        for (size_t col=0; col<N; col++) {
+            C[row*N+col] = 0.0;
+            for (size_t k=0; k<N; k++) {
+                C[row*N+col] += A[row*N+k] * B[k+N*col];
+            }
+        }
+    }
+}
+
+
+inline void avx_matmul(T** mat1, T** mat2, T** result) {
+    
 }
 
 
