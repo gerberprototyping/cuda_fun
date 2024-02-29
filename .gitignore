@@ -9,3 +9,4 @@ matmul/matmul_int64
 **/report.txt
 saxpy/saxpy
 *.o
+**/bin

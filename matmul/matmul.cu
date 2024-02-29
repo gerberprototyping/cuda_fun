@@ -1,5 +1,5 @@
 #include <iostream>
-#include <stdio.h>
+#include <stdio.h>B
 #include <stdint.h>
 #include <assert.h>
 #include <random>
@@ -16,21 +16,21 @@ using namespace std::chrono;
 
 // Choose datatype
 //----------------
-// #define USE_FLOAT
-// #define USE_DOUBLE
-#define USE_INT32
+// #define USE_FLOAT32
+#define USE_FLOAT64
+// #define USE_INT32
 // #define USE_INT64
 
 // Choose array size
 //------------------
-// #define ARRAY_SIZE  _8MiB
+#define ARRAY_SIZE  _256MiB
 
 
-#ifdef USE_FLOAT
+#ifdef USE_FLOAT32
     typedef float T;
     #define T_print(val) printf("%f ", (val))
 #endif
-#ifdef USE_DOUBLE
+#ifdef USE_FLOAT64
     typedef double T;
     #define T_print(val) printf("%f ", (val))
 #endif
@@ -38,8 +38,8 @@ using namespace std::chrono;
     typedef int32_t T;
     #define T_print(val) printf("%3d ", (val))
 #endif
-#ifndef USE_FLOAT
-    #ifndef USE_DOUBLE
+#ifndef USE_FLOAT32
+    #ifndef USE_FLOAT64
         #ifndef USE_INT32
             typedef int64_t T;
             #define T_print(val) printf("%3ld ", (val))
@@ -49,14 +49,14 @@ using namespace std::chrono;
 #endif
 
 
-// #define NxN         (ARRAY_SIZE / sizeof(T))
-// #define N           ((size_t) floor(sqrt(NxN)))
-// #define ACTUAL_SIZE (N*N * sizeof(T))
+#define NxN         (ARRAY_SIZE / sizeof(T))
+#define N           ((size_t) floor(sqrt(NxN)))
+#define ACTUAL_SIZE (N*N * sizeof(T))
 
-#define N           1024
-#define NxN         (N*N)
-#define ARRAY_SIZE  (NxN * sizeof(T))
-#define ACTUAL_SIZE ARRAY_SIZE
+// #define N           1024
+// #define NxN         (N*N)
+// #define ARRAY_SIZE  (NxN * sizeof(T))
+// #define ACTUAL_SIZE ARRAY_SIZE
 
 
 #define STR_BUFF_OFFSET     16
@@ -70,7 +70,7 @@ __global__ void gpu_matmul_trans(T* A, T* B, T* C);
 
 inline void cpu_matmul(T* A, T* B, T* C);
 inline void cpu_matmul_trans(T* A, T* B, T* C);
-inline void avx_matmul(T mat1[N][N], T mat2[N][N], T result[N][N]);
+inline void avx256_matmul_int32(T* A, T* B, T* C);
 
 void allocate(T** ptr, size_t n);
 void print(T* A, T* B, T* C);
@@ -80,7 +80,7 @@ void print(T* A, T* B, T* C);
 
 int main() {
 
-    // assert(ARRAY_SIZE >= ACTUAL_SIZE);
+    assert(ARRAY_SIZE >= ACTUAL_SIZE);
 
     // Set locale for printf
     setlocale(LC_NUMERIC, "");
@@ -117,11 +117,11 @@ int main() {
     allocate(&C, ARRAY_SIZE);
     allocate(&BASELINE, ARRAY_SIZE);
 
-    #ifdef USE_FLOAT
-        printf("Using single-precision floating point");
+    #ifdef USE_FLOAT32
+        printf("Using single-precision 32-bit floating point");
     #endif
-    #ifdef USE_DOUBLE
-        printf("Using double-precision floating point");
+    #ifdef USE_FLOAT64
+        printf("Using double-precision 64-bit floating point");
     #endif
     #ifdef USE_INT32
         printf("Using 32-bit integer");
@@ -141,12 +141,12 @@ int main() {
     cudaMemPrefetchAsync(C, ARRAY_SIZE, cudaCpuDeviceId);
     cudaMemPrefetchAsync(BASELINE, ARRAY_SIZE, cudaCpuDeviceId);
     srand(0);
-    #ifdef USE_FLOAT
+    #ifdef USE_FLOAT32
         std::uniform_real_distribution<T> my_rand(-1,1);
         std::default_random_engine rand_engine;
     #endif
     for (size_t i=0; i<NxN; i++) {
-        #ifdef USE_FLOAT
+        #ifdef USE_FLOAT32
             A[i] = my_rand(rand_engine);
             B[i] = my_rand(rand_engine);
         #else
@@ -165,7 +165,7 @@ int main() {
     // printf("done\n");
 
     // CPU
-    printf("CPU...");
+    printf("CPU...      ");
     fflush(stdout);
     auto start = high_resolution_clock::now();
     cpu_matmul(A, B, BASELINE);
@@ -176,7 +176,7 @@ int main() {
     printf("done  %s us\n", time_str);
 
     // CPU Transposed
-    printf("CPUt..");
+    printf("CPUt...     ");
     fflush(stdout);
     start = high_resolution_clock::now();
     cpu_matmul_trans(A, B, C);
@@ -188,7 +188,7 @@ int main() {
 
 
     // GPU
-    printf("GPU...");
+    printf("GPU...      ");
     fflush(stdout);
     cudaMemPrefetchAsync(A, ARRAY_SIZE, deviceId);
     cudaMemPrefetchAsync(B, ARRAY_SIZE, deviceId);
@@ -204,7 +204,7 @@ int main() {
 
 
     // GPU Transposed
-    printf("GPUt..");
+    printf("GPUt...     ");
     fflush(stdout);
     cudaMemPrefetchAsync(A, ARRAY_SIZE, deviceId);
     cudaMemPrefetchAsync(B, ARRAY_SIZE, deviceId);
@@ -218,20 +218,20 @@ int main() {
     time_str = __str_buff - (TIME_STR_WIDTH - strlen(__str_buff));
     printf("done  %s us\n", time_str);
 
-
     // AVX
     #ifdef USE_INT32
+    if (ARRAY_SIZE == ACTUAL_SIZE) {
         cudaMemPrefetchAsync(A, ARRAY_SIZE, cudaCpuDeviceId);
         cudaMemPrefetchAsync(B, ARRAY_SIZE, cudaCpuDeviceId);
         cudaMemPrefetchAsync(C, ARRAY_SIZE, cudaCpuDeviceId);
-        printf("AVX...");
+        printf("AVX-256...  ");
         fflush(stdout);
         // Requires C to be initialized to 0
         for (size_t i=0; i<NxN; i++) {
             C[i] = 0;
         }
         start = high_resolution_clock::now();
-        avx_matmul((T(*)[N]) A, (T(*)[N]) B, (T(*)[N]) C);
+        avx256_matmul_int32(A, B, C);
         stop = high_resolution_clock::now();
         time = duration_cast<microseconds>(stop - start);
         sprintf(__str_buff, "%'ld", time.count());
@@ -239,7 +239,7 @@ int main() {
         printf("done  %s us\n", time_str);
         
         // Verify
-        printf("Verifying AVX...");
+        printf("Verifying AVX-256 result...");
         fflush(stdout);
         // cudaMemPrefetchAsync(A, ARRAY_SIZE, cudaCpuDeviceId);
         // cudaMemPrefetchAsync(B, ARRAY_SIZE, cudaCpuDeviceId);
@@ -253,18 +253,23 @@ int main() {
             }
         }
         if (!valid) {
-            printf("\nERROR: CPU and AVX results do not match.\n");
+            printf("\n\n!!!ERROR: CPU and AVX-256 results do not match.\n\n");
             if (N <= 16) {
                 printf("\nCPU:\n");
                 print(A, B, BASELINE);
             }
             if (N <= 16) {
-                printf("\n\nAVX:\n");
+                printf("\n\nAVX-256:\n");
                 print(A, B, C);
             }
         } else {
             printf("done\n");
         }
+    } else {
+        printf("AVX-256 matrix dimension must be power of 2. Currently N=%ld\n", N);
+    }
+    #else
+        printf("AVX-256 only used with int32\n");
     #endif
 
 }
@@ -282,7 +287,7 @@ __global__ void gpu_matmul(T* A, T* B, T* C) {
 __global__ void gpu_matmul_trans(T* A, T* B, T* C) {
     T sum = 0;
     for (size_t k=0; k<N; k++) {
-        sum += A[blockIdx.x*N + k] * B[k + N*blockIdx.y]; // B tranposed
+        sum += A[blockIdx.x*N + k] * B[k + N*blockIdx.y]; // B transposed
     }
     C[blockIdx.x*N + blockIdx.y] = sum;
 }
@@ -312,33 +317,35 @@ inline void cpu_matmul_trans(T* A, T* B, T* C) {
 }
 
 
-inline void avx_matmul(T mat1[N][N], T mat2[N][N], T result[N][N]) {
+// https://codereview.stackexchange.com/questions/177616/avx-simd-in-matrix-multiplication
+inline void avx256_matmul_int32(T* A, T* B, T* C) {
     __m256i vec_multi_res = _mm256_setzero_si256(); //Initialize vector to zero
-    __m256i vec_mat1 = _mm256_setzero_si256(); //Initialize vector to zero
-    __m256i vec_mat2 = _mm256_setzero_si256(); //Initialize vector to zero
+    __m256i vec_A = _mm256_setzero_si256();         //Initialize vector to zero
+    __m256i vec_B = _mm256_setzero_si256();         //Initialize vector to zero
 
     size_t i, j, k;
     for (i = 0; i < N; i++)
     {
         for (j = 0; j < N; ++j)
         {
-            //Stores one element in mat1 and use it in all computations needed before proceeding
+            //Stores one element in A and use it in all computations needed before proceeding
             //Stores as vector to increase computations per cycle
-            vec_mat1 = _mm256_set1_epi32(mat1[i][j]);
+            vec_A = _mm256_set1_epi32(A[i*N + j]);
 
             for (k = 0; k < N; k += 8)
             {
-                vec_mat2 = _mm256_loadu_si256((__m256i*)&mat2[j][k]); //Stores row of second matrix (eight in each iteration)
-                vec_multi_res = _mm256_loadu_si256((__m256i*)&result[i][k]); //Loads the result matrix row as a vector
-                vec_multi_res = _mm256_add_epi32(vec_multi_res ,_mm256_mullo_epi32(vec_mat1, vec_mat2));//Multiplies the vectors and adds to the result vector
+                vec_B = _mm256_loadu_si256((__m256i*)&B[j*N + k]);         //Stores row of second matrix (eight in each iteration)
+                vec_multi_res = _mm256_loadu_si256((__m256i*)&C[i*N + k]); //Loads the C matrix row as a vector
+                vec_multi_res = _mm256_add_epi32(vec_multi_res ,_mm256_mullo_epi32(vec_A, vec_B)); //Multiplies the vectors and adds to the C vector
 
-                _mm256_storeu_si256((__m256i*)&result[i][k], vec_multi_res); //Stores the result vector into the result array
+                _mm256_storeu_si256((__m256i*)&C[i*N + k], vec_multi_res); //Stores the C vector into the C array
             }
         }
     }
 }
 
 
+// https://www.intel.com/content/www/us/en/developer/articles/technical/accelerating-compute-intensive-workloads-with-intel-avx-512-using-microsoft-visual-studio.html
 inline void avx_matmul_intel(T* A, T* B, T* C) {
 
 }
