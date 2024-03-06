@@ -1,0 +1,7 @@
+Using 32-bit integer with array size 64 MiB
+CPU...      done   326,561,915 us
+CPUt...     done    28,813,378 us
+GPU...      done    28,895,641 us
+GPUt...     done    28,793,302 us
+AVX-256...  done     9,060,406 us
+Verifying AVX-256 result...done

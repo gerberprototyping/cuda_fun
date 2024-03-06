@@ -1,0 +1,6 @@
+Using single-precision floating point with array size 64 MiB
+CPU...      done   331,708,006 us
+CPUt...     done    65,569,759 us
+GPU...      done    28,987,011 us
+GPUt...     done    28,764,825 us
+AVX-256 only used with int32

@@ -22,9 +22,9 @@ The GPU algorithms have not yet been optimized very much.
 ### Matrix Sizes
 - $16$ MiB
 - $32$ MiB
-- $64$ MiB $~~$*in-progress...*
-- $128$ MiB $~$*in-progress...*
-- $256$ MiB $~$*maybe?*
+- $64$ MiB
+- $128$ MiB
+- $256$ MiB
 
 
 ## Results
@@ -42,8 +42,8 @@ number of total operations for 32-bit and 64-bit datatypes respectively.
 
 | | $int32$ | $int64$ | $int64~$ 32 MiB | $float32$ | $float64$ | $float64~$ 32 MiB
 |-|-|-|-|-|-|-|
-| **CPU** | $\textcolor{red}{24,290}$ | $2,824$ | $\textcolor{red}{26,546}$ | $\textcolor{red}{25,315}$ | $3,284$ | $\textcolor{red}{26,802}$
-| **CPU**$^T$ | $~~3,501$ | $\textcolor{lightgreen}{1,426}$ | $\textcolor{lightgreen}{~~4,121}$ | $\textcolor{yellow}{~~8,136}$ | $2,921$ | $\textcolor{yellow}{~~8,214}$
+| **CPU** | $\textcolor{red}{24,290}$ | $\textcolor{orange}{2,824}$ | $\textcolor{red}{26,546}$ | $\textcolor{red}{25,315}$ | $\textcolor{orange}{3,284}$ | $\textcolor{red}{26,802}$
+| **CPU**$^T$ | $~~3,501$ | $\textcolor{lightgreen}{1,426}$ | $\textcolor{lightgreen}{~~4,121}$ | $\textcolor{orange}{~~8,136}$ | $\textcolor{orange}{2,921}$ | $\textcolor{yellow}{~~8,214}$
 | **GPU** | $~~3,590$ | $2,098$ | $~~5,946$ | $~~3,590$ | $2,103$ | $~~5,981$
 | **GPU**$^T$ | $~~3,536$ | $2,053$ | $~~5,702$ | $~~3,538$ | $2,097$ | $~~5,934$
 | **AVX-256** | $\textcolor{lightgreen}{~~1,100}$ | $~~~-$ | $~~~~~~-$ | $~~~~~-$ | $~~~~-$ | $~~~~~-$
@@ -66,7 +66,32 @@ There are several very interesting trends that appear in this data:
 - Note that GPU performance was measured *after* data had been transferred. The
   calculation time is purely GPU work.
 
+<br>
+
 
 ### Results: 64 MiB / 128 MiB
 
-Data gathering in progress...
+**Table 2.** 64MiB / 128MiB results $~~$ *(time in milliseconds)*
+
+| | $int32$ | $int64$ | $int64~$ 128 MiB | $float32$ | $float64$ | $float64~$ 128 MiB
+|-|-|-|-|-|-|-|
+| **CPU** | $\textcolor{red}{326,562}$ | $\textcolor{red}{72,696}$ | $\textcolor{red}{375,60}$ | $\textcolor{red}{331,708}$ | $\textcolor{red}{73,329}$ | $\textcolor{red}{372,430}$
+| **CPU**$^T$ | $~~28,813$ | $\textcolor{lightgreen}{11,370}$ | $~~\textcolor{lightgreen}{32,306}$ | $~~\textcolor{orange}{65,570}$ | $\textcolor{yellow}{23,198}$ | $~~\textcolor{yellow}{65,675}$
+| **GPU** | $~~28,896$ | $16,809$ | $~~46,879$ | $~~28,987$ | $16,828$ | $~~47,535$
+| **GPU**$^T$ | $~~28,793$ | $16,549$ | $~~44,857$ | $~~28,765$ | $16,779$ | $~~48,025$
+| **AVX-256** | $~~~~\textcolor{lightgreen}{9,060}$ | $~~~~-$ | $~~~~~~-$ | $~~~~~-$ | $~~~~~-$ | $~~~~~-$
+
+<br>
+
+
+### Results: 256 MiB
+
+**Table 3.** 256 MiB results $~~$ *(time in milliseconds)*
+
+| | $int32$ | $int64$ | $float32$ | $float64$ |
+|-|-|-|-|-|
+| **CPU** | $\textcolor{orange}{334,602}$ | $\textcolor{red}{923,857}$ | $\textcolor{orange}{388,764}$ | $\textcolor{red}{931,200}$
+| **CPU**$^T$ | $\textcolor{lightgreen}{223,795}$ | $~~\textcolor{lightgreen}{89,133}$ | $\textcolor{red}{524,617}$ | $\textcolor{yellow}{185,623}$
+| **GPU** | $237,699$ | $137,740$ | $238,003$ | $135,521$
+| **GPU**$^T$ | $230,987$ | $132,353$ | $231,465$ | $135,857$
+| **AVX-256** | $~~\textcolor{lightgreen}{74,559}$ | $~~~~~-$ | $~~~~~-$ | $~~~~~-$

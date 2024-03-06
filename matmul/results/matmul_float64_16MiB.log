@@ -1,0 +1,5 @@
+Using double-precision floating point with array size 16.00 MiB
+CPU...      done     3,158,934 us
+CPUt...     done     2,910,123 us
+GPU...      done     2,145,461 us
+GPUt...     done     2,123,040 us

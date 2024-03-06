@@ -1,0 +1,5 @@
+Using 64-bit integer with array size 16.00 MiB
+CPU...      done     2,717,514 us
+CPUt...     done     1,424,579 us
+GPU...      done     2,120,667 us
+GPUt...     done     2,068,142 us
